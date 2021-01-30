@@ -1,15 +1,21 @@
 class config:
-    num_inputs = 8
+    features_start = 1
+    features_end = 9
+    features_cols = list(range(features_start, features_end))
+    num_inputs = len(features_cols)
     num_outputs = 1
-    num_hidden = 128
+    num_hidden = 32
     num_layers = 2
     num_dropout = 0.2
 
-    num_fold = 15
-    num_epochs = 100
-    batch_size = 500
-    learning_rate = 1e-10
-    weight_decay = 0
+    labels_index = -1
+    time_step = 5
+
+    num_fold = 40
+    num_epochs = 10000
+    batch_size = 3000
+    learning_rate = 1e-3
+    weight_decay = 0.1
 
     random_seed = 42
 

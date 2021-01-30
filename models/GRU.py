@@ -9,4 +9,14 @@ class GRU(nn.Module):
                           dropout=config.num_dropout)
         self.linear = nn.Linear(in_features=config.num_hidden, out_features=config.num_outputs)
 
-    def forward(self):
+    def forward(self, X, hidden=None):
+        gru_out, hidden = self.gru(X, hidden)
+        linear_out = self.linear(gru_out)
+        return linear_out, hidden
+
+
+if __name__ == '__main__':
+    from config import config
+    net = GRU(config)
+    print(net)
+

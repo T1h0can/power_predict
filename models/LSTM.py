@@ -13,3 +13,9 @@ class LSTM(nn.Module):
         lstm_out, hidden = self.lstm(X, hidden)
         linear_out = self.linear(lstm_out)
         return linear_out, hidden
+
+
+if __name__ == '__main__':
+    from config import config
+    net = LSTM(config)
+    print(net)

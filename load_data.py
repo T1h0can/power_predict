@@ -4,9 +4,15 @@ import pandas as pd
 import torch
 import numpy as np
 import fit_to_csv
+import random
+from sklearn.preprocessing import StandardScaler
 
 
-def load_data():
+def load_data(config):
+    """
+    加载所有数据到df，扔掉小于3000行的，返回df的list
+    :return: list of all df
+    """
     csv_path = os.path.join('dataset', 'csv')
     if not os.path.exists(csv_path):
         fit_path = os.path.join('dataset', 'fit')
@@ -15,7 +21,8 @@ def load_data():
     # csv_path = os.path.join(csv_path, '*.csv')
     # print(csv_path)
     csv_files = glob.glob(csv_path)
-    all_features, all_labels = [], []
+    # all_features, all_labels = [], []
+    all_df = []
     n = 0
     for file in csv_files:
         # print(file)
@@ -24,6 +31,8 @@ def load_data():
         if df.shape[0] < 3000:
             continue
         n += 1
+        print(file)
+        # df.astype(float32)
         calc_power_sealevel(df)
         calc_grade(df)
         calc_hr_grade(df)
@@ -31,26 +40,50 @@ def load_data():
         calc_acceleration(df)
         fill_and_drop(df)
         df = df.reset_index(drop=True)
-        features = df.iloc[:, 1: 9]
-        std_features(features)
+        # std_features(df)
+        features_cols = df.columns.values.tolist()[config.features_start: config.features_end]
+        df[features_cols] = df[features_cols].apply(lambda x: (x - x.mean()) / (x.std()))
+        # print(df.iloc[:5, config.features_start: config.features_end])
+        # print(df.info())
+        # if file == 'dataset/csv/ZhouZheng/2019-08-28-10-06.csv':
+        #     print(df.iloc[:5, 4: 9])
+        #     print(df.iloc[-5:, 4: 9])
+        # ss = StandardScaler()
+        # scale_features = df.columns.values.tolist()[1:9]
+        # df[scale_features] = ss.fit_transform(df[scale_features])
+        # print(df.iloc[:5, 1: 9])
+        all_df.append(df)
+        # features = df.iloc[:, 1: 9]
+        # std_features(features)
         # print(df.iloc[:5, 1: 9])
         # print(features.head())
-        labels = df.iloc[:, -1]
-        all_features.append(features)
-        all_labels.append(labels)
-    all_features = pd.concat(all_features)
-    all_labels = pd.concat(all_labels)
-    print(all_features.shape, all_labels.shape)
-    print(n)
-    return all_features, all_labels
+        # labels = df.iloc[:, -1]
+        # all_features.append(features)
+        # all_labels.append(labels)
+    print('{} files appended'.format(n))
+    return all_df
+    # if is_Linear:
+    #     all_df = pd.concat(all_df)
+    #     all_features = all_df.iloc[:, 1: 9]
+    #     # all_features = pd.concat(all_features)
+    #     all_labels = all_df.iloc[:, -1]
+    #     # all_labels = pd.concat(all_labels)
+    #     print(all_features.shape, all_labels.shape)
+    #     return all_features, all_labels
+    # else:
+    #     for df in all_df:
+    #         features = df.iloc[:, 1: 9]
+    #         labels = df.iloc[:, -1]
+
         # features = torch.tensor(features.values, dtype=torch.float32)
         # labels = torch.tensor(labels.values, dtype=torch.float32)
         # yield features, labels
 
 
 def std_features(df: pd.DataFrame):
+    col = df.columns.values.tolist()[1:9]
     # for key in ['speed', 'cadence', 'heart_rate', 'temperature']:
-    for key in df.columns.values.tolist():
+    for key in col:
         values = df[key]
         mean = values.mean()
         std = values.std()
@@ -90,6 +123,7 @@ def calc_grade(df: pd.DataFrame, periods=2):
     diff_altitude = df['altitude'].diff(periods=periods)
     diff_distance = df['distance'].diff(periods=periods)
     grade = round(diff_altitude / diff_distance * 100, 2)
+    # print(grade)
     grade[:periods] = 0.0
     # df['grade'] = grade
     df.insert(5, 'grade', grade)
@@ -148,8 +182,36 @@ def fill_and_drop(df: pd.DataFrame):
     df[df['cadence'] == 0] = np.nan
     df[df['distance'] == 0.0] = np.nan
     df[df['speed'] == 0.0] = np.nan
+    df[df['grade'] == np.inf] = np.nan
+    df[df['grade'] == -np.inf] = np.nan
     df.dropna(axis=0, how='any', inplace=True)
 
 
+def load_data_for_linear(config):
+    """
+    返回tensor
+    :param config:
+    :return:
+    """
+    # TODO: 随机抽出测试集，剩余为训练集
+    all_df = load_data(config)
+    k = len(all_df)
+
+    all_df = pd.concat(all_df)
+    all_features = all_df.iloc[:, config.features_start: config.features_end]
+    all_labels = all_df.iloc[:, config.labels_index]
+    print(all_features.shape, all_labels.shape)
+    all_features = torch.tensor(all_features.values, dtype=torch.float32)
+    all_labels = torch.tensor(all_labels.values, dtype=torch.float32)
+    return all_features, all_labels
+
+
+def load_data_for_rnn():
+    # TODO: 把数据集处理成时间序列
+    all_df = load_data()
+
+
 if __name__ == '__main__':
-    load_data()
+    from config import config
+    # myconf = config.config
+    load_data_for_linear(config)

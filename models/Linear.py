@@ -10,3 +10,9 @@ class LinearNet(nn.Module):
     def forward(self, X):
         linear_out = self.linear(X)
         return linear_out
+
+
+if __name__ == '__main__':
+    from config import config
+    net = LinearNet(config)
+    print(net)

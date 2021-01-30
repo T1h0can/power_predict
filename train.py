@@ -1,12 +1,12 @@
 import torch
 import torch.utils.data as Data
 import torch.optim as optim
-from load_data import load_data
+from load_data import load_data_for_linear
 from models.Linear import LinearNet
-from config import config
-from utils import seed_torch, getKFoldData, log_rmse
+from utils import seed_torch, k_fold
 
 
+'''
 def train(net, config):
     train_ls, test_ls = [], []
     train_l_sum, test_l_sum = 0.0, 0.0
@@ -50,12 +50,39 @@ def train(net, config):
         #     l.backward()
         #     optimizer.step()
         # print('epoch {}/{}, loss {}'.format(epoch, config.num_epochs, l.item()))
+'''
+
+
+def train_linear(config):
+    net = LinearNet(config)
+    features, labels = load_data_for_linear(config)
+    k_fold(features, labels, net, config)
+
+
+def train(config):
+    net = LinearNet(config)
+    features, labels = load_data_for_linear(config)
+    dataset = Data.TensorDataset(features, labels)
+    data_iter = Data.DataLoader(dataset, shuffle=True)
+    loss = torch.nn.MSELoss()
+    optimizer = optim.Adam(net.parameters(), lr=config.learning_rate, weight_decay=config.weight_decay)
+    for epoch in range(config.num_epochs):
+        for X, y in data_iter:
+            l = loss(net(X), y.view(-1, 1))
+            optimizer.zero_grad()
+            l.backward()
+            optimizer.step()
+        print('{}/{} epoch, loss {}'.format(epoch + 1, config.num_epochs, l.item()))
 
 
 if __name__ == '__main__':
-    myconfig = config
-    seed_torch(myconfig.random_seed)
-    net = LinearNet(config=myconfig)
-    for param in net.parameters():
-        torch.nn.init.normal_(param, mean=0, std=0.01)
-    train(net, myconfig)
+    from config import config as conf
+    seed_torch(conf.random_seed)
+    train(conf)
+    # train_linear(conf)
+    # net = LinearNet(config=conf)
+    # features, labels = load_data_for_linear(conf)
+    # k_fold(features, labels, net, conf)
+    # for param in net.parameters():
+    #     torch.nn.init.normal_(param, mean=0, std=0.01)
+    # train(net, myconfig)
