@@ -9,17 +9,17 @@ from models.Linear import LinearNet
 def getKFoldData(k, i, X, y):
     assert k > 1
     fold_size = X.shape[0] // k
-    X_train, y_train, X_valid, y_valid = None, None, None, None
 
+    X_train, y_train, X_valid, y_valid = None, None, None, None
     for j in range(k):
         idx = slice(j * fold_size, (j + 1) * fold_size)
         X_part, y_part = X[idx, :], y[idx]
         if j == i:
-            X_valid, y_part = X_part, y_part
+            X_valid, y_valid = X_part, y_part
         elif X_train is None:
             X_train, y_train = X_part, y_part
         else:
-            X_train = torch.cat((X_train, X_part), dim=0)
+            X_train = torch.cat((X_train, X_part), dim=0)  # dim=0增加行数，竖着连接
             y_train = torch.cat((y_train, y_part), dim=0)
     return X_train, y_train, X_valid, y_valid
 
@@ -45,10 +45,11 @@ def train(net, train_features, train_labels, test_features, test_labels, config)
             l.backward()
             optimizer.step()
         train_ls.append(log_rmse(net, train_features, train_labels))
-        if test_labels is not None:
-            test_ls.append(log_rmse(net, test_features, test_labels))
         if (epoch + 1) % 10 == 0:
             print('epoch {}/{}, loss {}'.format(epoch + 1, config.num_epochs, l.item()))
+    if test_labels is not None:
+        test_ls.append(log_rmse(net, test_features, test_labels))
+    # print(test_ls)
     return train_ls, test_ls
 
 
@@ -57,7 +58,6 @@ def k_fold(X_train, y_train, net, config):
     k = config.num_fold
     for i in range(k):
         data = getKFoldData(k, i, X_train, y_train)
-        # print(len(data))
         # net = LinearNet(config)
         train_ls, valid_ls = train(net, *data, config)
         train_l_sum += train_ls[-1]
